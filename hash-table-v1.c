@@ -27,6 +27,7 @@ struct hash_table_v1 {
 struct hash_table_v1 *hash_table_v1_create()
 {
 	int err;
+	//err = pthread_mutex_init(&hash_table->lock, NULL);
 	struct hash_table_v1 *hash_table = calloc(1, sizeof(struct hash_table_v1));
 	err = pthread_mutex_init(&hash_table->lock, NULL);
 	if (err != 0) {
@@ -78,10 +79,11 @@ void hash_table_v1_add_entry(struct hash_table_v1 *hash_table,
                              const char *key,
                              uint32_t value)
 {
+	pthread_mutex_lock(&hash_table->lock);
 	struct hash_table_entry *hash_table_entry = get_hash_table_entry(hash_table, key);
 	struct list_head *list_head = &hash_table_entry->list_head;
 	struct list_entry *list_entry = get_list_entry(hash_table, key, list_head);
-	pthread_mutex_lock(&hash_table->lock);
+	
 	/* Update the value if it already exists */
 	if (list_entry != NULL) {
 		list_entry->value = value;
@@ -99,10 +101,12 @@ void hash_table_v1_add_entry(struct hash_table_v1 *hash_table,
 uint32_t hash_table_v1_get_value(struct hash_table_v1 *hash_table,
                                  const char *key)
 {
+	pthread_mutex_lock(&hash_table->lock);
 	struct hash_table_entry *hash_table_entry = get_hash_table_entry(hash_table, key);
 	struct list_head *list_head = &hash_table_entry->list_head;
 	struct list_entry *list_entry = get_list_entry(hash_table, key, list_head);
 	assert(list_entry != NULL);
+	pthread_mutex_unlock(&hash_table->lock);
 	return list_entry->value;
 }
 
