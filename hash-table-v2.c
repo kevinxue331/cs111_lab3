@@ -7,7 +7,7 @@
 
 #include <pthread.h>
 #include <errno.h>
-
+#define POOL_SIZE 5000
 struct list_entry {
 	const char *key;
 	uint32_t value;
@@ -24,6 +24,7 @@ struct hash_table_entry {
 struct hash_table_v2 {
 	struct hash_table_entry entries[HASH_TABLE_CAPACITY];
 };
+
 
 struct hash_table_v2 *hash_table_v2_create()
 {
@@ -77,25 +78,24 @@ void hash_table_v2_add_entry(struct hash_table_v2 *hash_table,
 {
 	
 	int err;
-	
-	
 	struct hash_table_entry *hash_table_entry = get_hash_table_entry(hash_table, key);
-	struct list_head *list_head = &hash_table_entry->list_head;
-	struct list_entry *list_entry = get_list_entry(hash_table, key, list_head);
-	list_entry = calloc(1, sizeof(struct list_entry));
-	list_entry->key = key;
-	list_entry->value = value;
+	//struct list_head *list_head = &hash_table_entry->list_head;
+	
+	struct list_entry *list_entry;
 	err = pthread_mutex_lock(&hash_table_entry->lock);
+	list_entry = get_list_entry(hash_table, key, &hash_table_entry->list_head);
 	if(err != 0) exit(err);
-	/* Update the value if it already exists */
 	if (list_entry != NULL) {
 		list_entry->value = value;
 		err = pthread_mutex_unlock(&hash_table_entry->lock);
 		if (err != 0) exit(err);
+		
 		return;
 	}
-	
-	SLIST_INSERT_HEAD(list_head, list_entry, pointers);
+	list_entry = calloc(1, sizeof(struct list_entry));
+	list_entry->key = key;
+	list_entry->value = value;
+	SLIST_INSERT_HEAD(&hash_table_entry->list_head, list_entry, pointers);
 	err = pthread_mutex_unlock(&hash_table_entry->lock);
 	if (err != 0) exit(err);
 	
